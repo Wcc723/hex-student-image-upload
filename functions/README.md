@@ -20,10 +20,37 @@ Cloud Functions utilize environment variables for configuration, which are manag
 
 ## Deployment
 
-To deploy these functions to your Firebase project, navigate to the root of your project and run:
+### 1. 建置函式程式碼
 
 ```sh
-npx firebase deploy --only functions
+pnpm --filter functions build
+```
+
+（若使用 `firebase deploy` 內建的自動建置，可跳過此步，但建議保持輸出與 Git 中的 `lib/` 同步。）
+
+### 2. 設定環境參數
+
+部署前請確認 Cloud Functions 的環境參數已設定：
+
+```sh
+firebase functions:config:set ALLOWED_DOMAINS="http://localhost:5173,hexschool.io,hexschool.com"
+firebase functions:config:get > functions/.env.prod.json      # 可選，備份設定
+```
+
+若專案使用 `.env.students-artwork-wall` 等檔案管理，可透過 `firebase functions:config:import` 匯入。
+
+### 3. 部署到 Firebase
+
+在專案根目錄執行：
+
+```sh
+firebase deploy --only functions
+```
+
+如僅更新特定函式，可使用：
+
+```sh
+firebase deploy --only functions:imageProxy
 ```
 
 ## Local Development
