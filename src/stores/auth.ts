@@ -6,7 +6,7 @@ import {
   signOut as firebaseSignOut,
   updateProfile,
 } from 'firebase/auth'
-import { get, onValue, ref as dbRef, set, serverTimestamp, update, type Unsubscribe } from 'firebase/database'
+import { get, onValue, ref as dbRef, set, update, type Unsubscribe } from 'firebase/database'
 import { auth, database, googleAuthProvider } from '@/lib/firebase'
 
 export interface UserProfile {
@@ -116,7 +116,6 @@ export const useAuthStore = defineStore('auth', {
         email: user.email ?? null,
         photoURL: user.photoURL ?? null,
         isAdmin: snapshot.child('profile/isAdmin').val() ?? false,
-        lastLoginAt: serverTimestamp(),
       }
 
       if (!snapshot.exists()) {
@@ -134,7 +133,6 @@ export const useAuthStore = defineStore('auth', {
         'profile/displayName': profilePayload.displayName,
         'profile/email': profilePayload.email,
         'profile/photoURL': profilePayload.photoURL,
-        'profile/lastLoginAt': profilePayload.lastLoginAt,
       })
 
       // 同步 Firebase Auth profile 的 displayName/photoURL 避免過期資料
