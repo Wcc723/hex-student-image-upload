@@ -117,9 +117,19 @@ const showFeedback = (message: string) => {
   }, 2400)
 }
 
+const baseUrl = import.meta.env.VITE_IMAGE_PROXY_URL
+console.log('VITE_IMAGE_PROXY_URL:', baseUrl)
+const getProxiedImageUrl = (image: GalleryImage) => {
+  if (!baseUrl) {
+    // In production, you might want to return a placeholder or log an error
+    return image.downloadURL // Fallback for safety
+  }
+  return `${baseUrl}?path=${image.storagePath}`
+}
+
 const copyImageUrl = async (image: GalleryImage) => {
-  const url = image.downloadURL
-  if (!url) {
+  const url = getProxiedImageUrl(image)
+  if (!url || !image.storagePath) {
     showFeedback('無法取得圖片連結')
     return
   }
@@ -150,7 +160,9 @@ const copyImageUrl = async (image: GalleryImage) => {
               class="h-10 w-10 rounded-full object-cover ring-2 ring-white/20"
             />
             <div>
-              <p class="text-sm font-medium text-white">{{ authStore.profile?.displayName ?? '未命名' }}</p>
+              <p class="text-sm font-medium text-white">
+                {{ authStore.profile?.displayName ?? '未命名' }}
+              </p>
               <p class="text-xs text-slate-400">{{ authStore.profile?.email }}</p>
             </div>
           </div>
@@ -208,7 +220,14 @@ const copyImageUrl = async (image: GalleryImage) => {
       @drop="handleDrop"
       @dragover="handleDragOver"
     >
-      <input ref="fileInput" type="file" class="hidden" accept="image/*" multiple @change="handleFileChange" />
+      <input
+        ref="fileInput"
+        type="file"
+        class="hidden"
+        accept="image/*"
+        multiple
+        @change="handleFileChange"
+      />
       <p class="text-lg font-medium text-white">拖放圖片到這裡，或</p>
       <div class="flex flex-wrap items-center justify-center gap-4 text-sm text-slate-300">
         <button
@@ -256,7 +275,10 @@ const copyImageUrl = async (image: GalleryImage) => {
         </div>
       </div>
 
-      <p v-if="!galleryStore.images.length" class="rounded-2xl border border-white/10 bg-white/5 p-8 text-center text-sm text-slate-300">
+      <p
+        v-if="!galleryStore.images.length"
+        class="rounded-2xl border border-white/10 bg-white/5 p-8 text-center text-sm text-slate-300"
+      >
         目前尚未上傳任何作品。你可以拖放圖片或點擊上方按鈕開始上傳。
       </p>
 
@@ -267,7 +289,11 @@ const copyImageUrl = async (image: GalleryImage) => {
           class="group relative flex flex-col overflow-hidden rounded-3xl border border-white/10 bg-white/5"
         >
           <div class="relative aspect-square overflow-hidden">
-            <img :src="image.downloadURL" alt="" class="h-full w-full object-cover transition group-hover:scale-105" />
+            <img
+              :src="getProxiedImageUrl(image)"
+              alt=""
+              class="h-full w-full object-cover transition group-hover:scale-105"
+            />
             <input
               type="checkbox"
               class="absolute left-4 top-4 h-5 w-5 rounded border-white/40 bg-black/40 text-indigo-400 transition"
@@ -293,10 +319,16 @@ const copyImageUrl = async (image: GalleryImage) => {
                 placeholder="為這張圖片寫點描述..."
               />
               <div class="flex items-center gap-2">
-                <button class="rounded-full bg-white px-4 py-1.5 text-xs font-semibold text-slate-900" @click="saveCaption">
+                <button
+                  class="rounded-full bg-white px-4 py-1.5 text-xs font-semibold text-slate-900"
+                  @click="saveCaption"
+                >
                   儲存
                 </button>
-                <button class="rounded-full border border-white/20 px-4 py-1.5 text-xs text-slate-200" @click="cancelEdit">
+                <button
+                  class="rounded-full border border-white/20 px-4 py-1.5 text-xs text-slate-200"
+                  @click="cancelEdit"
+                >
                   取消
                 </button>
               </div>
@@ -313,7 +345,9 @@ const copyImageUrl = async (image: GalleryImage) => {
               </button>
             </div>
 
-            <div class="flex flex-wrap items-center gap-2 border-t border-white/10 pt-3 text-xs text-slate-300">
+            <div
+              class="flex flex-wrap items-center gap-2 border-t border-white/10 pt-3 text-xs text-slate-300"
+            >
               <button
                 class="rounded-full border border-white/20 px-3 py-1 text-xs text-slate-200 transition hover:border-white/40 hover:text-white"
                 @click="copyImageUrl(image)"
