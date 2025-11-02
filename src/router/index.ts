@@ -55,16 +55,16 @@ const authGuard = async (
     await authStore.init()
   }
 
+  if (to.meta.requiresAdmin && authStore.isAdmin) {
+    return next({ name: 'admin' })
+  }
+
   if (to.name === 'login' && authStore.isAuthenticated) {
     return next({ name: 'gallery' })
   }
 
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     return next({ name: 'login', query: { redirect: to.fullPath } })
-  }
-
-  if (to.meta.requiresAdmin && !authStore.isAdmin) {
-    return next({ name: 'gallery' })
   }
 
   return next()

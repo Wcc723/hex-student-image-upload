@@ -9,6 +9,13 @@ import {
 import { get, onValue, ref as dbRef, set, update, type Unsubscribe } from 'firebase/database'
 import { auth, database, googleAuthProvider } from '@/lib/firebase'
 
+const parseBoolean = (value: unknown): boolean => {
+  if (typeof value === 'string') {
+    return value.toLowerCase() === 'true'
+  }
+  return value === true
+}
+
 export interface UserProfile {
   uid: string
   displayName: string | null
@@ -45,7 +52,7 @@ export const useAuthStore = defineStore('auth', {
   }),
   getters: {
     isAuthenticated: (state) => !!state.firebaseUser,
-    isAdmin: (state) => !!state.profile?.isAdmin,
+    isAdmin: (state) => parseBoolean(state.profile?.isAdmin),
     activeUserId: (state) => state.firebaseUser?.uid ?? null,
   },
   actions: {
@@ -82,8 +89,7 @@ export const useAuthStore = defineStore('auth', {
         await signInWithPopup(auth, googleAuthProvider)
       } catch (error) {
         console.error('[auth] signInWithGoogle error', error)
-        this.error =
-          error instanceof Error ? error.message : 'Google 登入失敗，請稍後再試。'
+        this.error = error instanceof Error ? error.message : 'Google 登入失敗，請稍後再試。'
         throw error
       } finally {
         this.status = 'ready'
@@ -115,7 +121,7 @@ export const useAuthStore = defineStore('auth', {
         displayName: user.displayName ?? null,
         email: user.email ?? null,
         photoURL: user.photoURL ?? null,
-        isAdmin: snapshot.child('profile/isAdmin').val() ?? false,
+        isAdmin: parseBoolean(snapshot.child('profile/isAdmin').val()),
       }
 
       if (!snapshot.exists()) {
@@ -163,12 +169,10 @@ export const useAuthStore = defineStore('auth', {
 
               this.profile = {
                 uid,
-                displayName:
-                  profileData.displayName ?? this.firebaseUser?.displayName ?? null,
+                displayName: profileData.displayName ?? this.firebaseUser?.displayName ?? null,
                 email: profileData.email ?? this.firebaseUser?.email ?? null,
-                photoURL:
-                  profileData.photoURL ?? this.firebaseUser?.photoURL ?? null,
-                isAdmin: Boolean(profileData.isAdmin),
+                photoURL: profileData.photoURL ?? this.firebaseUser?.photoURL ?? null,
+                isAdmin: parseBoolean(profileData.isAdmin),
                 count: statsData.count ?? 0,
                 quota: statsData.quota ?? DEFAULT_QUOTA,
               }
