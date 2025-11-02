@@ -1,12 +1,5 @@
 import { defineStore } from 'pinia'
-import {
-  get,
-  onValue,
-  ref as dbRef,
-  type Unsubscribe,
-  update,
-  type DataSnapshot,
-} from 'firebase/database'
+import { get, onValue, ref as dbRef, type Unsubscribe, type DataSnapshot } from 'firebase/database'
 import { database } from '@/lib/firebase'
 import type { GalleryImage } from '@/stores/gallery'
 import { useGalleryStore } from '@/stores/gallery'
@@ -181,11 +174,8 @@ export const useAdminStore = defineStore('admin', {
 
     async updateCaption(uid: string, imageId: string, caption: string) {
       this.assertAdmin()
-      const imageRef = dbRef(database, `users/${uid}/images/${imageId}`)
-      await update(imageRef, {
-        caption,
-        updatedAt: Date.now(),
-      })
+      const galleryStore = useGalleryStore()
+      await galleryStore.updateCaptionForUser(uid, imageId, caption)
     },
 
     normalizeUsers(snapshot: DataSnapshot): AdminUserSummary[] {

@@ -61,7 +61,6 @@ onBeforeUnmount(() => {
   adminStore.stopWatchingUsers()
   if (copyFeedbackTimer) {
     clearTimeout(copyFeedbackTimer)
-    copyFeedbackTimer = null
   }
 })
 
@@ -93,20 +92,11 @@ const copyFolderPath = async (uid: string) => {
   const path = `images/${uid}/`
   try {
     await navigator.clipboard.writeText(path)
-    copyFeedback.value = `已複製 ${path}`
+    showCopyFeedback(`已複製 ${path}`)
   } catch (error) {
     console.error('[admin] copyFolderPath error', error)
-    copyFeedback.value = '複製失敗，請手動複製資料夾路徑。'
+    showCopyFeedback('複製失敗，請手動複製資料夾路徑。')
   }
-
-  if (copyFeedbackTimer) {
-    clearTimeout(copyFeedbackTimer)
-  }
-
-  copyFeedbackTimer = setTimeout(() => {
-    copyFeedback.value = null
-    copyFeedbackTimer = null
-  }, 2400)
 }
 
 const beginEdit = (imageId: string, caption: string) => {
@@ -124,6 +114,31 @@ const saveCaption = () => {
   const sanitized = captionDraft.value.trim().slice(0, 200)
   adminStore.updateCaption(adminStore.selectedUserId, editingImageId.value, sanitized)
   cancelEdit()
+}
+
+const copyImageUrl = async (downloadURL: string) => {
+  if (!downloadURL) {
+    showCopyFeedback('無法取得圖片連結')
+    return
+  }
+  try {
+    await navigator.clipboard.writeText(downloadURL)
+    showCopyFeedback('已複製圖片連結，可直接分享')
+  } catch (error) {
+    console.error('[admin] copyImageUrl error', error)
+    showCopyFeedback('複製失敗，請手動複製連結')
+  }
+}
+
+const showCopyFeedback = (message: string) => {
+  copyFeedback.value = message
+  if (copyFeedbackTimer) {
+    clearTimeout(copyFeedbackTimer)
+  }
+  copyFeedbackTimer = setTimeout(() => {
+    copyFeedback.value = null
+    copyFeedbackTimer = null
+  }, 2400)
 }
 </script>
 
@@ -328,6 +343,14 @@ const saveCaption = () => {
                 @click="beginEdit(image.id, image.caption)"
               >
                 編輯註解
+              </button>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 border-t border-white/10 pt-3 text-xs text-slate-300">
+              <button
+                class="rounded-full border border-white/20 px-3 py-1 text-xs text-slate-200 transition hover:border-white/40 hover:text-white"
+                @click="copyImageUrl(image.downloadURL)"
+              >
+                複製圖片連結
               </button>
             </div>
           </div>

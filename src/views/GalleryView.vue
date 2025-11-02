@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useGalleryStore } from '@/stores/gallery'
+import type { GalleryImage } from '@/stores/gallery'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -11,6 +12,8 @@ const galleryStore = useGalleryStore()
 const fileInput = ref<HTMLInputElement | null>(null)
 const editingImageId = ref<string | null>(null)
 const captionDraft = ref('')
+const feedbackMessage = ref<string | null>(null)
+let feedbackTimer: ReturnType<typeof setTimeout> | null = null
 
 const isQuotaReached = computed(() => galleryStore.remainingQuota <= 0)
 const uploadInProgress = computed(() => galleryStore.uploadStatus === 'uploading')
@@ -32,6 +35,9 @@ watch(
 
 onBeforeUnmount(() => {
   galleryStore.unsubscribe()
+  if (feedbackTimer) {
+    clearTimeout(feedbackTimer)
+  }
 })
 
 const openFileDialog = () => {
@@ -95,6 +101,32 @@ const signOut = async () => {
   await authStore.signOut()
   router.replace({ name: 'login' })
 }
+
+const showFeedback = (message: string) => {
+  feedbackMessage.value = message
+  if (feedbackTimer) {
+    clearTimeout(feedbackTimer)
+  }
+  feedbackTimer = setTimeout(() => {
+    feedbackMessage.value = null
+    feedbackTimer = null
+  }, 2400)
+}
+
+const copyImageUrl = async (image: GalleryImage) => {
+  const url = image.downloadURL
+  if (!url) {
+    showFeedback('無法取得圖片連結')
+    return
+  }
+  try {
+    await navigator.clipboard.writeText(url)
+    showFeedback('已複製圖片連結，可直接分享')
+  } catch (error) {
+    console.error('[gallery] copyImageUrl error', error)
+    showFeedback('複製失敗，請手動複製連結')
+  }
+}
 </script>
 
 <template>
@@ -103,7 +135,7 @@ const signOut = async () => {
       <div class="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
         <div>
           <h1 class="text-2xl font-semibold text-white">作品管理</h1>
-          <p class="text-sm text-slate-300">你可以上傳、標註與刪除最多 30 張作品。</p>
+          <p class="text-sm text-slate-300">你可以上傳、標註、刪除並分享最多 30 張作品。</p>
         </div>
         <div class="flex items-center gap-3">
           <div class="flex items-center gap-3 rounded-full bg-white/10 px-4 py-2">
@@ -126,6 +158,7 @@ const signOut = async () => {
           </button>
         </div>
       </div>
+
       <dl class="grid gap-4 text-sm text-slate-300 sm:grid-cols-3">
         <div class="rounded-2xl bg-white/5 p-4">
           <dt class="text-xs uppercase tracking-widest text-slate-400">已上傳</dt>
@@ -150,6 +183,12 @@ const signOut = async () => {
       class="rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200"
     >
       {{ galleryStore.error }}
+    </p>
+    <p
+      v-else-if="feedbackMessage"
+      class="rounded-2xl border border-emerald-400/40 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100"
+    >
+      {{ feedbackMessage }}
     </p>
 
     <section
@@ -260,6 +299,15 @@ const signOut = async () => {
                 @click="beginEditCaption(image.id, image.caption)"
               >
                 編輯註解
+              </button>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2 border-t border-white/10 pt-3 text-xs text-slate-300">
+              <button
+                class="rounded-full border border-white/20 px-3 py-1 text-xs text-slate-200 transition hover:border-white/40 hover:text-white"
+                @click="copyImageUrl(image)"
+              >
+                複製圖片連結
               </button>
             </div>
           </div>

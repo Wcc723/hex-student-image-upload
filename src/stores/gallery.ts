@@ -2,13 +2,13 @@ import { defineStore } from 'pinia'
 import {
   get,
   onValue,
+  push,
   ref as dbRef,
   remove,
   runTransaction,
   set,
   update,
   type Unsubscribe,
-  push,
 } from 'firebase/database'
 import {
   deleteObject,
@@ -16,8 +16,8 @@ import {
   ref as storageRef,
   uploadBytesResumable,
   type UploadTask,
+  type UploadTaskSnapshot,
 } from 'firebase/storage'
-import type { UploadTaskSnapshot } from 'firebase/storage'
 import { useAuthStore } from '@/stores/auth'
 import { database, storage } from '@/lib/firebase'
 
@@ -64,8 +64,7 @@ export const useGalleryStore = defineStore('gallery', {
     unsubscribeFn: null,
   }),
   getters: {
-    sortedImages: (state) =>
-      [...state.images].sort((a, b) => b.createdAt - a.createdAt),
+    sortedImages: (state) => [...state.images].sort((a, b) => b.createdAt - a.createdAt),
     remainingQuota(): number {
       const authStore = useAuthStore()
       const quota = authStore.profile?.quota ?? MAX_IMAGES
@@ -81,22 +80,31 @@ export const useGalleryStore = defineStore('gallery', {
       this.unsubscribeFn = onValue(
         imagesRef,
         (snapshot) => {
-          const data = snapshot.val() as Record<string, GalleryImage> | null
-          if (!data) {
+          if (!snapshot.exists()) {
             this.images = []
             this.status = 'idle'
             return
           }
 
-          this.images = Object.entries(data).map(([id, value]) => ({
-            id,
-            fileName: value.fileName,
-            storagePath: value.storagePath,
-            downloadURL: value.downloadURL,
-            caption: value.caption ?? '',
-            createdAt: value.createdAt ?? Date.now(),
-            updatedAt: value.updatedAt ?? value.createdAt ?? Date.now(),
-          }))
+          const result: GalleryImage[] = []
+          snapshot.forEach((child) => {
+            const id = child.key
+            if (!id) return
+            const data = child.val() ?? {}
+            const createdAt = data.createdAt ?? Date.now()
+            const updatedAt = data.updatedAt ?? createdAt
+            result.push({
+              id,
+              fileName: data.fileName ?? 'unknown',
+              storagePath: data.storagePath ?? '',
+              downloadURL: data.downloadURL ?? '',
+              caption: data.caption ?? '',
+              createdAt,
+              updatedAt,
+            })
+          })
+
+          this.images = result
           this.status = 'idle'
         },
         (error) => {
@@ -321,12 +329,27 @@ export const useGalleryStore = defineStore('gallery', {
       const authStore = useAuthStore()
       const uid = authStore.activeUserId
       if (!uid) return
+      await this.updateCaptionForUser(uid, imageId, caption)
+    },
 
+    async updateCaptionForUser(uid: string, imageId: string, caption: string) {
       const imageRef = dbRef(database, `users/${uid}/images/${imageId}`)
+      const timestamp = Date.now()
       await update(imageRef, {
         caption,
-        updatedAt: Date.now(),
+        updatedAt: timestamp,
       })
+
+      const localImage = this.images.find((item) => item.id === imageId)
+      if (localImage) {
+        localImage.caption = caption
+        localImage.updatedAt = timestamp
+      }
+    },
+
+    getDownloadUrl(imageId: string): string | null {
+      const image = this.images.find((item) => item.id === imageId)
+      return image?.downloadURL ?? null
     },
   },
 })
