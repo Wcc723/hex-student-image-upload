@@ -32,6 +32,9 @@ const selectedUser = computed(() =>
 
 const images = computed(() => adminStore.selectedUserImages)
 const hasSelection = computed(() => adminStore.selectedImageIds.length > 0)
+const totalImageCount = computed(() =>
+  adminStore.users.reduce((total, user) => total + (user.count ?? 0), 0),
+)
 
 watch(
   () => [authStore.isInitialized, authStore.isAdmin] as const,
@@ -72,20 +75,20 @@ const toggleSelection = (imageId: string) => {
   adminStore.toggleSelection(imageId)
 }
 
-const deleteImage = (imageId: string) => {
+const deleteImage = async (imageId: string) => {
   if (!adminStore.selectedUserId) return
   if (!window.confirm('確定要刪除此圖片嗎？')) {
     return
   }
-  adminStore.deleteImage(adminStore.selectedUserId, imageId)
+  await adminStore.deleteImage(adminStore.selectedUserId, imageId)
 }
 
-const deleteSelected = () => {
+const deleteSelected = async () => {
   if (!adminStore.selectedUserId) return
   if (!window.confirm('確定要刪除所有選中的圖片嗎？')) {
     return
   }
-  adminStore.deleteSelectedForUser(adminStore.selectedUserId)
+  await adminStore.deleteSelectedForUser(adminStore.selectedUserId)
 }
 
 const copyFolderPath = async (uid: string) => {
@@ -156,11 +159,8 @@ const showCopyFeedback = (message: string) => {
       </div>
 
       <div class="flex flex-col gap-2 text-sm text-slate-300 md:flex-row md:items-center md:justify-between">
-        <span>已註冊使用者：{{ adminStore.users.length }} 位</span>
-        <span
-          v-if="selectedUser"
-          class="rounded-full bg-white/10 px-3 py-1 text-xs text-white"
-        >
+        <span>已註冊使用者：{{ adminStore.users.length }} 位｜總圖片數：{{ totalImageCount }} 張</span>
+        <span v-if="selectedUser" class="rounded-full bg-white/10 px-3 py-1 text-xs text-white">
           目前檢視：images/{{ selectedUser.uid }}/
         </span>
       </div>
