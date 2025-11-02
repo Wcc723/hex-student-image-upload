@@ -354,6 +354,7 @@ const copyImageUrl = async (image: GalleryImage) => {
               >
                 複製圖片連結
               </button>
+              (圖片僅會在六角網域下正常顯示)
             </div>
           </div>
         </li>
